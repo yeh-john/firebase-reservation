@@ -10,46 +10,101 @@
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background-color: #f5f5f5;
+        background-color: #f4f6f9;
         margin: 0;
       }
+
       #container {
         background-color: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        width: 300px;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        width: 320px;
+        text-align: center;
       }
+
+      h2 {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
       input, select {
         width: 100%;
-        padding: 10px;
-        margin: 5px 0;
-        border-radius: 5px;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 6px;
         border: 1px solid #ccc;
+        font-size: 14px;
+        box-sizing: border-box;
       }
+
+      input:focus, select:focus {
+        border-color: #007bff;
+        outline: none;
+      }
+
       button {
-        padding: 10px;
+        padding: 12px;
         width: 100%;
         background-color: #007bff;
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 6px;
         cursor: pointer;
-        margin: 5px 0;
+        font-size: 14px;
+        margin-top: 10px;
       }
+
       button:hover {
         background-color: #0056b3;
       }
+
       .warning {
         color: red;
         display: none;
         margin-top: 10px;
+        font-size: 14px;
       }
+
       .summary {
-        padding: 10px;
-        background-color: #f1f1f1;
-        border-radius: 5px;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        margin-top: 15px;
+        display: none;
+      }
+
+      .summary h3 {
+        font-size: 1.2em;
+        color: #333;
+      }
+
+      .summary p {
+        font-size: 14px;
+        color: #555;
+      }
+
+      .summary button {
         margin-top: 10px;
+        width: 48%;
+        font-size: 14px;
+      }
+
+      .summary button:nth-child(1) {
+        background-color: #28a745;
+      }
+
+      .summary button:nth-child(1):hover {
+        background-color: #218838;
+      }
+
+      .summary button:nth-child(2) {
+        background-color: #dc3545;
+      }
+
+      .summary button:nth-child(2):hover {
+        background-color: #c82333;
       }
     </style>
   </head>
@@ -71,10 +126,11 @@
       
       <button id="submitBtn">Submit</button>
       <p class="warning">Please select a Tuesday or Friday for your reservation.</p>
-      <div id="summary" class="summary" style="display:none;">
+
+      <div id="summary" class="summary">
         <h3>Reservation Summary</h3>
         <p id="summaryDetails"></p>
-        <button onclick="save()">Confirm Reservation</button>
+        <button onclick="save()">Confirm</button>
         <button onclick="resetForm()">Cancel</button>
       </div>
     </div>
@@ -84,7 +140,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
 
     <script>
-      // Firebase configuration (replace with your actual API keys)
+      // Firebase configuration (fill with your Firebase project credentials)
       const firebaseConfig = {
         apiKey: "PUT_YOUR_API_KEY_HERE",
         authDomain: "PUT_YOUR_AUTH_DOMAIN_HERE",
@@ -95,15 +151,16 @@
         appId: "PUT_YOUR_APP_ID_HERE"
       };
 
+
       // Initialize Firebase
-      // firebase.initializeApp(firebaseConfig);
-      // const database = firebase.database();  // Use the non-modular Firebase Database method
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();  // Use the non-modular Firebase Database method
 
       // Function to validate if the selected date is a Tuesday or Friday
       function isValidDay(date) {
         const selectedDate = new Date(date);
         const dayOfWeek = selectedDate.getDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
-        return dayOfWeek === 1 || dayOfWeek === 4; // 2 is Tuesday, 5 is Friday
+        return dayOfWeek === 2 || dayOfWeek === 5; // 2 is Tuesday, 5 is Friday
       }
 
       // Function to convert the date to Japan Standard Time (JST)
@@ -113,38 +170,48 @@
         return formatter.format(new Date(date));
       }
 
-      // Function to show the reservation summary
-      function showSummary() {
-        const name = document.getElementById('name').value;
-        const email = document.getElementById('email').value;
-        const phone = document.getElementById('phone').value;
-        const reservationDate = document.getElementById('reservationDate').value;
-        const classSelected = document.getElementById('classSelect').value;
+    // Function to show the reservation summary
+    function showSummary() {
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    const reservationDate = document.getElementById('reservationDate').value;
+    const classSelected = document.getElementById('classSelect').value;
 
-        const warningMessage = document.querySelector('.warning');
-        const summarySection = document.getElementById('summary');
-        const summaryDetails = document.getElementById('summaryDetails');
+    const warningMessage = document.querySelector('.warning');
+    const summarySection = document.getElementById('summary');
+    const summaryDetails = document.getElementById('summaryDetails');
 
-        if (!isValidDay(reservationDate)) {
-          warningMessage.style.display = 'block';
-          summarySection.style.display = 'none';
-        } else {
-          warningMessage.style.display = 'none';
-          summarySection.style.display = 'block';
+    // Function to get the day name (e.g., "Friday" or "Tuesday")
+    function getDayName(date) {
+        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const selectedDate = new Date(date);
+        return daysOfWeek[selectedDate.getDay()];
+    }
 
-          // Convert the reservation date to JST before displaying it
-          const formattedDate = convertToJST(reservationDate);
+    if (!isValidDay(reservationDate)) {
+        warningMessage.style.display = 'block';
+        summarySection.style.display = 'none';
+    } else {
+        warningMessage.style.display = 'none';
+        summarySection.style.display = 'block';
 
-          // Display reservation details for confirmation
-          summaryDetails.innerHTML = `
-            <strong>Name:</strong> ${name} <br>
-            <strong>Email:</strong> ${email} <br>
-            <strong>Phone:</strong> ${phone} <br>
-            <strong>Reservation Date (JST):</strong> ${formattedDate} <br>
-            <strong>Class:</strong> Class ${classSelected} <br>
-          `;
-        }
-      }
+        // Convert the reservation date to JST before displaying it
+        const formattedDate = convertToJST(reservationDate);
+        const dayName = getDayName(reservationDate);  // Get the day name (e.g., "Friday")
+
+        // Display reservation details for confirmation
+        summaryDetails.innerHTML = `
+        <strong>Name:</strong> ${name} <br>
+        <strong>Email:</strong> ${email} <br>
+        <strong>Phone:</strong> ${phone} <br>
+        <strong>Reservation Date (JST):</strong> ${formattedDate} <br>
+        <strong>Day of the Week:</strong> ${dayName} <br>
+        <strong>Class:</strong> Class ${classSelected} <br>
+        `;
+    }
+    }
+
 
       // Function to save the reservation in Firebase
       function save() {
@@ -168,15 +235,14 @@
         const reservationKey = name + "_" + reservationDate;  // Unique key based on name and date
         const reservationRef = database.ref('reservations/' + reservationKey);
 
-        // Placeholder for saving to the Firebase database
-        // reservationRef.set(reservationData)
-        //   .then(() => {
-        //     alert('Reservation saved successfully!');
-        //     resetForm();  // Reset form after saving
-        //   })
-        //   .catch(error => {
-        //     alert('Error saving reservation: ' + error.message);
-        //   });
+        reservationRef.set(reservationData)
+          .then(() => {
+            alert('Reservation saved successfully!');
+            resetForm();  // Reset form after saving
+          })
+          .catch(error => {
+            alert('Error saving reservation: ' + error.message);
+          });
       }
 
       // Function to reset the form
